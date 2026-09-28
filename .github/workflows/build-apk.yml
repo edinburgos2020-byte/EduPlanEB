@@ -1,0 +1,38 @@
+name: Construir APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Descomprimir proyecto
+        run: unzip -q proyecto.zip -d app
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Generar proyecto Android
+        working-directory: app
+        run: flutter create --platforms=android --org com.eduplaneb --project-name eduplaneb .
+      - name: Ajustar manifiesto
+        working-directory: app
+        run: bash tool/patch_android.sh
+      - name: Dependencias
+        working-directory: app
+        run: flutter pub get
+      - name: Analizar
+        working-directory: app
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Compilar APK
+        working-directory: app
+        run: flutter build apk --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EduPlanEB-apk
+          path: app/build/app/outputs/flutter-apk/app-release.apk
